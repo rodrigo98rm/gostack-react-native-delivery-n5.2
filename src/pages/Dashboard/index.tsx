@@ -35,6 +35,7 @@ interface Food {
   price: number;
   thumbnail_url: string;
   formattedPrice: string;
+  category: number;
 }
 
 interface Category {
@@ -55,11 +56,30 @@ const Dashboard: React.FC = () => {
 
   async function handleNavigate(id: number): Promise<void> {
     // Navigate do ProductDetails page
+    navigation.navigate('FoodDetails', { id });
   }
 
   useEffect(() => {
     async function loadFoods(): Promise<void> {
-      // Load Foods from API
+      let url = `/foods?name_like=${searchValue}`;
+
+      if (selectedCategory) {
+        url += `&category_like=${selectedCategory}`;
+      }
+
+      if (selectedCategory && !searchValue) {
+        url = `/foods?category_like=${selectedCategory}`;
+      }
+
+      const response = await api.get<Food[]>(url);
+
+      const formattedFoods = response.data.map(food => {
+        const updatedFood = food;
+        updatedFood.formattedPrice = formatValue(food.price);
+        return updatedFood;
+      });
+
+      setFoods(formattedFoods);
     }
 
     loadFoods();
@@ -67,14 +87,19 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     async function loadCategories(): Promise<void> {
-      // Load categories from API
+      const response = await api.get('/categories');
+      setCategories(response.data);
     }
 
     loadCategories();
   }, []);
 
   function handleSelectCategory(id: number): void {
-    // Select / deselect category
+    if (id === selectedCategory) {
+      setSelectedCategory(undefined);
+      return;
+    }
+    setSelectedCategory(id);
   }
 
   return (
@@ -122,6 +147,7 @@ const Dashboard: React.FC = () => {
             ))}
           </CategorySlider>
         </CategoryContainer>
+
         <FoodsContainer>
           <Title>Pratos</Title>
           <FoodList>
